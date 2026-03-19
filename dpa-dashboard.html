@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DPA Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/monday-sdk-js/dist/main.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: #f6f7fb; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+
+    .loading {
+      display: flex; align-items: center; justify-content: center;
+      height: 100vh; flex-direction: column; gap: 12px;
+    }
+    .loading .spinner {
+      width: 32px; height: 32px;
+      border: 4px solid rgba(1,118,211,0.18);
+      border-top-color: rgba(1,118,211,1);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    .loading .text { font-size: 14px; color: #64748b; font-weight: 600; }
+    .error { color: #dc2626; font-size: 14px; font-weight: 600; text-align: center; padding: 40px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .dashboard {
+      display: none;
+      width: 100%; height: 100%;
+      flex-direction: column;
+      overflow-y: auto;
+    }
+    .dashboard.visible { display: flex; }
+
+    .panel { width: 100%; border: none; flex-shrink: 0; }
+    .panel-dealpath { height: 220px; }
+    .panel-recordpage { height: 750px; }
+    .panel-updates { height: 500px; }
+
+    iframe { width: 100%; height: 100%; border: none; }
+  </style>
+</head>
+<body>
+  <div class="loading" id="loading">
+    <div class="spinner"></div>
+    <div class="text">Connecting to Monday.com...</div>
+  </div>
+
+  <div class="dashboard" id="dashboard">
+    <div class="panel panel-dealpath">
+      <iframe id="frame-dealpath" sandbox="allow-scripts allow-same-origin allow-popups allow-forms"></iframe>
+    </div>
+    <div class="panel panel-recordpage">
+      <iframe id="frame-recordpage" sandbox="allow-scripts allow-same-origin allow-popups allow-forms"></iframe>
+    </div>
+    <div class="panel panel-updates">
+      <iframe id="frame-updates" sandbox="allow-scripts allow-same-origin allow-popups allow-forms"></iframe>
+    </div>
+  </div>
+
+  <script>
+    const BASE = "https://alanq-cmd.github.io/dpa-crm-embeds";
+    const EMBEDS = {
+      dealpath:   { frame: "frame-dealpath",   file: "dpa-dealpath.html" },
+      recordpage: { frame: "frame-recordpage", file: "dpa-recordpage.html" },
+      updates:    { frame: "frame-updates",    file: "dpa-updates.html" }
+    };
+
+    function getUrlParam(name) {
+      return new URLSearchParams(window.location.search).get(name);
+    }
+
+    function loadEmbeds(boardId, itemId) {
+      const params = new URLSearchParams();
+      if (boardId) { params.set("boardId", boardId); params.set("board_id", boardId); }
+      if (itemId)  { params.set("itemId", itemId); params.set("item_id", itemId); params.set("pulseId", itemId); }
+
+      for (const [key, cfg] of Object.entries(EMBEDS)) {
+        const iframe = document.getElementById(cfg.frame);
+        if (iframe) {
+          iframe.src = `${BASE}/${cfg.file}?${params.toString()}`;
+        }
+      }
+
+      document.getElementById("loading").style.display = "none";
+      document.getElementById("dashboard").classList.add("visible");
+    }
+
+    function showError(msg) {
+      const el = document.getElementById("loading");
+      el.innerHTML = `<div class="error">${msg}</div>`;
+    }
+
+    // --- Resolve IDs: Monday SDK first, then URL params ---
+    (function init() {
+      // 1. Check URL params
+      let boardId = getUrlParam("boardId") || getUrlParam("board_id") || "";
+      let itemId  = getUrlParam("itemId")  || getUrlParam("item_id")  || getUrlParam("pulseId") || "";
+
+      if (itemId) {
+        console.log("[Dashboard] IDs from URL:", { boardId, itemId });
+        loadEmbeds(boardId, itemId);
+        return;
+      }
+
+      // 2. Try Monday SDK
+      if (window.mondaySdk) {
+        try {
+          const monday = window.mondaySdk();
+
+          const timeout = setTimeout(() => {
+            showError("Could not get item context from Monday.com. Make sure this view is added to an item.");
+          }, 5000);
+
+          monday.listen("context", (res) => {
+            clearTimeout(timeout);
+            const ctx = res.data || {};
+            boardId = boardId || String(ctx.boardId || ctx.boardIds?.[0] || "");
+            itemId  = itemId  || String(ctx.itemId  || ctx.pulseId || "");
+
+            console.log("[Dashboard] IDs from Monday SDK:", { boardId, itemId });
+
+            if (!itemId) {
+              showError("No item ID found. Open this view from within a Monday.com item.");
+              return;
+            }
+            loadEmbeds(boardId, itemId);
+          });
+        } catch (e) {
+          console.error("[Dashboard] Monday SDK error:", e);
+          showError("Monday SDK initialization failed.");
+        }
+      } else {
+        showError("No Monday SDK available and no URL parameters found.");
+      }
+    })();
+  </script>
+</body>
+</html>
