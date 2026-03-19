@@ -1055,19 +1055,6 @@
                     </div>
                   </div>
 
-                  <div class="field" data-field="condition">
-                    <div class="label">Condition</div>
-                    <div class="value">
-                      <span class="value-text" data-editable="true">—</span>
-                      <span class="edit" title="Edit">
-                        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                          <path d="M12 20h9" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                          <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
-                      </span>
-                    </div>
-                  </div>
-
                   <div class="field" data-field="occupancy">
                     <div class="label">Occupancy</div>
                     <div class="value">
@@ -1237,6 +1224,19 @@
 
               <div class="field-grid">
                 <div>
+                  <div class="field" data-field="condition">
+                    <div class="label">Condition</div>
+                    <div class="value">
+                      <span class="value-text" data-editable="true">—</span>
+                      <span class="edit" title="Edit">
+                        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                          <path d="M12 20h9" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                          <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                      </span>
+                    </div>
+                  </div>
+
                   <div class="field" data-field="appraisal">
                     <div class="label">Appraised Value</div>
                     <div class="value">
@@ -1442,11 +1442,9 @@
                       <tr>
                         <th>Name</th>
                         <th>Status</th>
-                        <th>Last Contact</th>
-                        <th>Contact Outcome</th>
+                        <th>Phones</th>
+                        <th>Notes</th>
                         <th>Next Follow-up</th>
-                        <th>Offer Status</th>
-                        <th>Number</th>
                         <th>Quick Actions</th>
                       </tr>
                     </thead>
@@ -2005,6 +2003,27 @@
         const isClosed = String(c.lead_status || "").trim().toLowerCase() === "closed";
         const closedBadge = isClosed ? `<span style="display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;background:#16a34a;flex-shrink:0;margin-left:6px;vertical-align:middle;"><svg style="width:9px;height:9px;" viewBox="0 0 20 20" fill="white"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clip-rule="evenodd"/></svg></span>` : '';
 
+        // Build phones cell with all numbers and call outcome dropdowns
+        const phones = Array.isArray(c.phones) ? c.phones : [];
+        const allPhones = phones.length > 0 ? phones : (phone1 ? [c.phone_1 || c.phone1] : []);
+
+        const CALL_OUTCOMES = ["No Answer", "Left Voicemail", "Spoke - Interested", "Spoke - Not Interested", "Spoke - Call Back", "Wrong Number", "Disconnected", "Do Not Call"];
+
+        const phonesHtml = allPhones.length > 0 ? allPhones.map((ph, pi) => {
+          const display = formatPhoneDisplay(ph);
+          if (!display) return '';
+          return `
+            <div style="display:flex; align-items:center; gap:6px; margin-bottom:${pi < allPhones.length - 1 ? '6px' : '0'};">
+              <a href="tel:${formatPhoneForTel(display)}" style="font-weight:500; color:#0176d3; text-decoration:none; font-size:14px; white-space:nowrap;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">${escapeHtml(display)}</a>
+              <select style="font-size:12px; padding:2px 4px; border:1px solid #d1d5db; border-radius:4px; color:#6b7280; cursor:pointer; max-width:120px;" onchange="console.log('Call outcome for ${escapeHtml(display)}:', this.value)">
+                <option value="">Outcome</option>
+                ${CALL_OUTCOMES.map(co => `<option value="${co}">${co}</option>`).join('')}
+              </select>
+            </div>`;
+        }).filter(Boolean).join('') : '<span class="td-muted">—</span>';
+
+        const contactNotes = c.notes || "—";
+
         return `
         <tr>
           <td>
@@ -2021,17 +2040,9 @@
             </div>
           </td>
           <td>${leadStatusDot(leadStatus)}</td>
-          <td>
-            ${lastContact && lastContact !== "—"
-              ? `<div style="font-weight: 600;">${escapeHtml(lastContact)}</div><div style="font-size: 12px; color: ${lastContactColor};">${daysAgo || ''}</div>`
-              : `<span class="td-muted">Not contacted</span>`}
-          </td>
-          <td>${leadStatus && leadStatus !== "—" ? `<div style="font-weight: 500; color: #374151;">${escapeHtml(leadStatus)}</div>` : `<span class="td-muted">—</span>`}</td>
+          <td style="min-width:240px;">${phonesHtml}</td>
+          <td style="max-width:200px; white-space:normal; font-size:14px; color:#374151;">${contactNotes !== "—" ? escapeHtml(contactNotes) : `<span class="td-muted">—</span>`}</td>
           <td>${followupCell}</td>
-          <td>
-            ${offerMade ? `<div style="font-weight: 600;">Presented</div><div style="font-size: 12px; color: #6b7280;">${offerAmount && offerAmount !== "—" ? "$" + Math.round(parseFloat(String(offerAmount).replace(/[^0-9.]/g, ""))).toLocaleString("en-US") : "—"}</div>` : `<span class="td-muted">No offer</span>`}
-          </td>
-          <td>${phone1 ? `<a href="tel:${formatPhoneForTel(phone1)}" style="font-weight:500; color:#0176d3; text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">${escapeHtml(phone1)}</a>` : `<span class="td-muted">—</span>`}</td>
           <td>
             <div class="quick-actions">
               <button class="btn add-note-btn" type="button" data-contact-index="${index}">Add Note</button>
@@ -2040,7 +2051,7 @@
         </tr>
       `;
       }).join("");
-      tbody.innerHTML = rows || `<tr><td class="td-muted" colspan="8">No Confirmed Owners</td></tr>`;
+      tbody.innerHTML = rows || `<tr><td class="td-muted" colspan="6">No Confirmed Owners</td></tr>`;
 
       // Add event listeners to Add Note buttons
       tbody.querySelectorAll('.add-note-btn').forEach(btn => {
@@ -2087,6 +2098,7 @@
           <th>Relation</th>
           <th>Lead Status</th>
           <th>Contact Outcome</th>
+          <th>Notes</th>
           ${phoneHeadersHtml}
         `;
       }
@@ -2131,6 +2143,7 @@
           <td class="td-muted">${escapeHtml(relationship)}</td>
           <td>${leadStatusDot(leadStatus)}</td>
           <td>${escapeHtml(contactOutcome)}</td>
+          <td style="max-width:200px; white-space:normal; font-size:14px; color:#374151;">${c.notes && c.notes !== "—" ? escapeHtml(c.notes) : `<span class="td-muted">—</span>`}</td>
           ${phoneCells}
         </tr>
       `;
@@ -2150,30 +2163,58 @@
       });
     });
 
+    // Status/dropdown options pulled from Monday.com board
+    const FIELD_OPTIONS = {
+      "lead_type": ["D4D", "Tax Suite", "Tax Roll List", "LandGlide", "Referral", "JV", "D4D List", "Tax Auction"],
+      "tax_status": ["Working on it", "Done", "Stuck"],
+      "next_action_step": ["Call Back for more Info", "Qualified Lead", "New Prospect", "Follow Up Long Term", "Ready to Dial", "Dead Lead", "Sold", "Follow Up", "Reskiptrace", "Taxes Paid", "Listed on Market", "Foreclosed", "Prepare Mail", "Mail Sent", "Under Contract", "No Answer", "Pass on deal", "Not interested", "Research"],
+      "pipeline_stage": ["Raw", "Research", "Qualified", "Dial", "Negotiating", "Under Contract", "Dead"],
+      "tier": ["HOT", "QUALIFIED", "MONITOR", "AUTO-WALK"],
+      "death_confirmed": ["Confirmed (2+)", "Likely (1 source)", "Unconfirmed", "Not Found", "Not Researched"],
+      "owner_status": ["Deceased Confirmed", "Deceased Likely", "Alive", "Unknown"],
+      "heir_count": ["0", "1", "2", "3", "4", "5", "6", "7", "8+"],
+      "occupancy": ["Occupied", "Vacant", "Unknown"],
+      "county": ["Montgomery", "Brazoria", "Grimes", "Harris", "San Jacinto", "Fort Bend", "Walker", "Galveston", "Waller", "Bexar", "Fort Worth", "Liberty"]
+    };
+
     // Column ID map — data-field → Monday.com column ID
     const COLUMN_ID_MAP = {
       // Property Details
-      "lead_type":          "text16__1",
-      "tax_status":         "dropdown_1_mkm2rj6r",
-      "condition":          "dropdown_mkm2dn8t",
-      "occupancy":          "dropdown_2_mkm2g8p5",
-      "total_equity":       "text_mkr4rctb",
+      "lead_type":          "color_mkv18m98",
+      "tax_status":         "color_mm1cmrqj",
+      "occupancy":          "color_mm1ksrpz",
+      "days_of_inactivity": "numeric_mm1kr9s1",
+      "total_equity":       "formula_mm1kmp9k",
       "deed_status":        "dropdown_mkxn2crm",
       "will_status":        "dropdown_mkxn8zvw",
       "title_issue":        "dropdown_3_mkm2q90p",
+      "tax_account":        "dup__of_reference__",
+      "county":             "dup__of_marketing",
+      "case_number":        "text_mkm83gq2",
+      "death_confirmed":    "color_mm1jxhen",
+      "owner_status":       "color_mm1jrrxs",
+      "last_payment_date":  "date_mm1jt744",
+      // Deal Metrics
+      "condition":          "numeric_mm1jftsp",
+      "appraisal":          "dup__of_retail_value",
+      "land_value":         "numeric_mm1jasdz",
+      "improvement_value":  "numeric_mm1jjkyx",
+      "years_delinquent":   "numeric_mm1j3x4r",
+      "tier":               "color_mm1jh3br",
+      "heir_count":         "dropdown_mm1jqw9x",
+      "taxes_owed":         "numbers3__1",
       // Update Activity
-      "next_action_step":   "dropdown_mkzkc600",
-      "stalled_reason":     "dropdown_mkzkq6pk",
-      "follow_up_date":     "date_mkpbazwa",
+      "next_action_step":   "color",
+      "stalled_reason":     "long_text_mkp4xwq7",
+      "follow_up_date":     "date_mm1cwn6k",
+      "pipeline_stage":     "color_mm1c7yw1",
       // Research
       "obituary_link":      "link_mkm1203y",
       "ancestry_link":      "link_mkn89tj9",
       "zillow_link":        "link_mkktcawe",
-      "tax_assessor_link":  "dup__of_obituary_mkm13z9",
-      "google_maps_link":   "link_mkxf5hmb",
-      "birth_date":         "text_mkm2b3zj",
-      "death_date":         "text_1_mkm22xph",
-      "age":                "text29__1",
+      "tax_assessor_link":  "link",
+      "google_maps_link":   "link_mm1dwgsf",
+      "deceased_owner":     "text_mkkmry1b",
       // Activity
       "last_contacted":     "date_Mjj4pmmI",
       "activity_notes":     "text_activity_notes",
@@ -2225,7 +2266,7 @@
       setTimeout(() => { toast.style.opacity = "0"; setTimeout(() => toast.remove(), 400); }, 2500);
     }
 
-    // Inline edit — saves to Monday on commit
+    // Inline edit — saves to Monday on commit (supports dropdown selectors for status fields)
     Array.from(document.querySelectorAll(".field .edit")).forEach(pencil => {
       pencil.addEventListener("click", (e) => {
         e.stopPropagation();
@@ -2234,21 +2275,45 @@
         const valueText = field.querySelector(".value-text");
         const editable = valueText.getAttribute("data-editable") === "true";
         if (!editable) return;
-        if (field.querySelector(".inline-input")) return;
+        if (field.querySelector(".inline-input") || field.querySelector(".inline-select")) return;
 
         const oldValue = valueText.textContent.trim() === "—" ? "" : valueText.textContent.trim();
         const valueWrap = field.querySelector(".value");
         valueText.style.display = "none";
         pencil.style.display = "none";
 
-        const input = document.createElement("input");
-        input.className = "inline-input";
-        input.value = oldValue;
-
         const left = document.createElement("div");
         left.style.flex = "1";
         left.style.minWidth = "0";
-        left.appendChild(input);
+
+        let inputEl;
+        const options = FIELD_OPTIONS[fieldKey];
+
+        if (options) {
+          // Dropdown selector for status/dropdown fields
+          inputEl = document.createElement("select");
+          inputEl.className = "inline-input inline-select";
+          inputEl.style.cursor = "pointer";
+          // Add blank option
+          const blankOpt = document.createElement("option");
+          blankOpt.value = "";
+          blankOpt.textContent = "— Select —";
+          inputEl.appendChild(blankOpt);
+          options.forEach(opt => {
+            const o = document.createElement("option");
+            o.value = opt;
+            o.textContent = opt;
+            if (opt === oldValue) o.selected = true;
+            inputEl.appendChild(o);
+          });
+        } else {
+          // Text input for regular fields
+          inputEl = document.createElement("input");
+          inputEl.className = "inline-input";
+          inputEl.value = oldValue;
+        }
+
+        left.appendChild(inputEl);
         valueWrap.insertBefore(left, valueWrap.firstChild);
 
         let committed = false;
@@ -2256,7 +2321,7 @@
         const commit = async () => {
           if (committed) return;
           committed = true;
-          const newValue = input.value.trim() || "—";
+          const newValue = (inputEl.value || "").trim() || "—";
           valueText.textContent = newValue;
           left.remove();
           valueText.style.display = "";
@@ -2275,14 +2340,25 @@
           pencil.style.display = "";
         };
 
-        input.addEventListener("blur", commit);
-        input.addEventListener("keydown", (ke) => {
-          if (ke.key === "Enter") { ke.preventDefault(); commit(); }
-          if (ke.key === "Escape") cancel();
-        });
+        if (options) {
+          // For select: commit on change, cancel on blur if unchanged
+          inputEl.addEventListener("change", commit);
+          inputEl.addEventListener("blur", () => {
+            setTimeout(() => { if (!committed) cancel(); }, 150);
+          });
+          inputEl.addEventListener("keydown", (ke) => {
+            if (ke.key === "Escape") cancel();
+          });
+        } else {
+          inputEl.addEventListener("blur", commit);
+          inputEl.addEventListener("keydown", (ke) => {
+            if (ke.key === "Enter") { ke.preventDefault(); commit(); }
+            if (ke.key === "Escape") cancel();
+          });
+        }
 
-        input.focus();
-        input.select();
+        inputEl.focus();
+        if (!options && inputEl.select) inputEl.select();
       });
     });
 
