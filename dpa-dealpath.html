@@ -1,684 +1,1389 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PropertyAid Partners - Deal Path</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Deal Path</title>
+  <style>
+    :root{
+      /* Modern, clean UI sans stack (Salesforce-ish without relying on SF Sans being installed) */
+      --font: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
 
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
-            background-color: #f7f7f7;
-            color: #333;
-            padding: 16px;
-        }
+      --active-bg: #17345b;
+      --active-fg: #ffffff;
 
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            background-color: white;
-            border-radius: 4px;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24);
-            padding: 20px;
-        }
+      --done-bg: #a6e7db;
+      --done-fg: #0d3a33;
 
-        .page-header {
-            margin-bottom: 24px;
-            border-bottom: 1px solid #e5e5e5;
-            padding-bottom: 16px;
-        }
+      --todo-bg: #e6e6e6;
+      --todo-fg: #4f4f4f;
 
-        .title-row {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            margin-bottom: 8px;
-        }
+      /* Deal Path sizing */
+      --track-h: 37px;
+      --cut: 15px;
+      --radius: 16px;
+      --overlap: 12px;
+      --divider: 2px;
 
-        h1 {
-            font-size: 18px;
-            font-weight: 600;
-            color: #333;
-        }
+      /* Embed padding */
+      --embed-pad-top: 0px;
+      --embed-pad-bottom: 6px;
+      --embed-pad-x: 8px;
 
-        .flag-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-            font-size: 12px;
-            font-weight: 600;
-            padding: 4px 8px;
-            border-radius: 3px;
-            margin-right: 8px;
-        }
+      /* Highlights */
+      --hl-label: #667085;
+      --hl-value: #111827;
 
-        .flag-deceased {
-            background-color: #f3e8e6;
-            color: #c23030;
-        }
+      /* Salesforce-ish Lead tile color */
+      --sf-lead-blue: #0176d3;
 
-        .flag-tax-suit {
-            background-color: #fef6e8;
-            color: #f59e0b;
-        }
+      /* Header (⬆️ +0.5pt-ish) */
+      --hl-title-size: 22.2px;
+      --hl-title-weight: 750;
 
-        .flag-heirs {
-            background-color: #e6f2ff;
-            color: #0176d3;
-        }
+      /* Metrics (⬆️ +0.5pt-ish) */
+      --hl-label-size: 12.7px;
+      --hl-value-size: 15.7px;
+      --hl-value-weight: 650;
+      --hl-label-weight: 650;
 
-        .subtitle {
-            font-size: 12px;
-            color: #666;
-            margin-bottom: 4px;
-        }
+      /* Indicators */
+      --ok: #1f7a3a;
+      --warn: #ca8a04;
+      --alert: #dc2626;
+      --stall-hl-bg: rgba(220,38,38,0.10);
+      --stall-hl-ring: rgba(220,38,38,0.18);
 
-        .loading-spinner {
-            display: none;
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            z-index: 1000;
-            background: rgba(255, 255, 255, 0.95);
-            padding: 32px;
-            border-radius: 8px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-            text-align: center;
-        }
+      /* Toast */
+      --toast-bg: #bff3ea;
+      --toast-fg: #0d3a33;
+      --toast-shadow: 0 8px 30px rgba(0,0,0,0.10);
+      --toast-radius: 8px;
+    }
 
-        .loading-spinner.show {
-            display: block;
-        }
+    html,body{
+      width:100%;
+      max-width:100%;
+      overflow-x:hidden;
+      min-height: 120px;
+    }
 
-        .spinner {
-            border: 3px solid #e5e5e5;
-            border-top: 3px solid #0176d3;
-            border-radius: 50%;
-            width: 32px;
-            height: 32px;
-            animation: spin 0.8s linear infinite;
-            margin: 0 auto 12px;
-        }
+    body{
+      margin:0;
+      background: transparent;
+      font-family: var(--font);
+      padding: var(--embed-pad-top) var(--embed-pad-x) var(--embed-pad-bottom);
+      box-sizing: border-box;
+      color: #111;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
 
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
+    .frame{
+      width:100%;
+      display:flex;
+      align-items:flex-start;
+      justify-content:center;
+    }
 
-        .loading-text {
-            font-size: 14px;
-            color: #333;
-            margin-top: 12px;
-        }
+    .root{
+      width: 100%;
+      max-width: 100%;
+      min-width: 0;
+      display:flex;
+      flex-direction: column;
+    }
 
-        .error-banner {
-            display: none;
-            background-color: #fdf0ec;
-            border: 1px solid #e76d68;
-            border-radius: 4px;
-            padding: 12px;
-            margin-bottom: 16px;
-            color: #c23030;
-            font-size: 13px;
-        }
+    /* ===== Header / Highlights (FIXED) ===== */
+    .highlights{
+      width: 100%;
+      padding: 4px 0 0 0;
+      box-sizing:border-box;
+      /* slightly tighter bottom spacing, so the bar sits a touch closer */
+      margin-bottom: 6px;
+    }
 
-        .error-banner.show {
-            display: block;
-        }
+    /* One clean single-line record header: [icon] [title] */
+    .hlTop{
+      display:flex;
+      align-items:center;        /* true vertical centering */
+      gap: 8px;                 /* consistent spacing */
+      min-width:0;
+    }
 
-        .success-toast {
-            display: none;
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            background-color: #04844b;
-            color: white;
-            padding: 12px 16px;
-            border-radius: 4px;
-            font-size: 13px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-            z-index: 1001;
-            animation: slideIn 0.3s ease-out;
-        }
+    /* Salesforce-like icon tile */
+    .hlIconTile{
+      width: 43px;
+      height: 43px;
+      border-radius: 6px;
+      background: transparent;
+      display:grid;
+      place-items:center;
+      flex: 0 0 auto;
+      box-shadow: none;
+    }
 
-        .success-toast.show {
-            display: block;
-        }
+    .hlIconTile img{
+      width: 43px;
+      height: 43px;
+      display:block;
+      object-fit: contain;
+    }
 
-        @keyframes slideIn {
-            from {
-                transform: translateX(400px);
-                opacity: 0;
-            }
-            to {
-                transform: translateX(0);
-                opacity: 1;
-            }
-        }
+    .hlTitle{
+      font-size: var(--hl-title-size);
+      font-weight: var(--hl-title-weight);
+      color: #0f172a;
+      line-height: 1.2;
+      white-space: nowrap;
+      overflow:hidden;
+      text-overflow: ellipsis;
+      min-width:0;
+    }
 
-        .pipeline-section {
-            margin-bottom: 32px;
-        }
+    /* Metrics row: clean grid + consistent gap (no dividers) */
+    .hlMetrics{
+      margin-top: 6px;
+      display:grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 16px;
+      padding: 0;
+      background: transparent;
+    }
 
-        .pipeline-label {
-            font-size: 12px;
-            font-weight: 600;
-            color: #666;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 12px;
-        }
+    .metric{
+      padding: 0;
+      min-width:0;
+      position:relative;
+    }
 
-        .pipeline-container {
-            display: flex;
-            align-items: center;
-            gap: 0;
-            overflow-x: auto;
-            padding: 12px 0;
-        }
+    .mLabel{
+      font-size: var(--hl-label-size);
+      font-weight: var(--hl-label-weight);
+      color: var(--hl-label);
+      white-space: nowrap;
+      overflow:hidden;
+      text-overflow: ellipsis;
+      line-height: 1.1;
+    }
 
-        .stage {
-            display: flex;
-            align-items: center;
-            position: relative;
-            min-width: auto;
-            flex-shrink: 0;
-        }
+    .mValue{
+      margin-top: 4px;
+      font-size: var(--hl-value-size);
+      font-weight: var(--hl-value-weight);
+      letter-spacing: 0;
+      color: var(--hl-value);
+      white-space: nowrap;
+      overflow:hidden;
+      text-overflow: ellipsis;
+      line-height: 1.2;
+      display:flex;
+      align-items:center;
+      gap: 6px;
+      min-width:0;
+    }
 
-        .stage-button {
-            padding: 12px 16px;
-            border: none;
-            border-radius: 4px;
-            font-size: 13px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            white-space: nowrap;
-        }
+    /* Stalled Reason: subtle highlight + red circled ! */
+    .stallHL{
+      display:inline-flex;
+      align-items:center;
+      gap: 6px;
+      padding: 2px 6px;
+      border-radius: 6px;
+      background: var(--stall-hl-bg);
+      box-shadow: inset 0 0 0 1px var(--stall-hl-ring);
+      max-width: 100%;
+    }
+    .alertIcon{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      width: 16px;
+      height: 16px;
+      flex: 0 0 auto;
+    }
+    .alertIcon svg{ width: 16px; height: 16px; display:block; }
 
-        .stage-button.completed {
-            background-color: #a6e7db;
-            color: #0a3622;
-        }
+    /* Follow-up indicator icon container */
+    .dueIcon{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      width: 16px;
+      height: 16px;
+      flex: 0 0 auto;
+    }
+    .dueIcon svg{ width: 16px; height: 16px; display:block; }
 
-        .stage-button.active {
-            background-color: #17345b;
-            color: white;
-        }
+    @media (max-width: 860px){
+      .hlMetrics{ grid-template-columns: 1fr 1fr; }
+    }
 
-        .stage-button.future {
-            background-color: #e6e6e6;
-            color: #333;
-        }
+    /* ===== Deal Path bar (unchanged) ===== */
+    .bar{
+      width: 100%;
+      display:flex;
+      align-items:center;
+      gap: 6px;
+      min-width: 0;
 
-        .stage-button.dead {
-            background-color: #f3e8e6;
-            color: #c23030;
-            margin-left: 24px;
-        }
+      /* Replaces the removed divider's spacing, but slightly tighter.
+         This will NOT push the bar lower than before (it will be the same or a bit higher). */
+      margin-top: 6px;
+    }
 
-        .stage-button:hover:not(.dead) {
-            opacity: 0.85;
-            transform: translateY(-2px);
-        }
+    .disclosure{
+      width: 30px;
+      height: 30px;
+      border-radius: 15px;
+      border: 1px solid rgba(0,0,0,0.10);
+      background: #ffffff;
+      display:grid;
+      place-items:center;
+      cursor:pointer;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+      transition: transform 160ms ease, box-shadow 160ms ease;
+      flex: 0 0 auto;
+    }
+    .disclosure:hover{
+      box-shadow: 0 6px 16px rgba(0,0,0,0.10);
+      transform: translateY(-1px);
+    }
+    .disclosure:active{ transform: translateY(0px); }
+    .disclosure svg{ transition: transform 180ms ease; }
+    .disclosure[aria-expanded="true"] svg{ transform: rotate(180deg); }
 
-        .chevron {
-            width: 20px;
-            height: 20px;
-            flex-shrink: 0;
-            background: linear-gradient(to right, transparent 48%, #e6e6e6 48%, #e6e6e6 52%, transparent 52%);
-            position: relative;
-            margin: 0 -8px;
-            z-index: 1;
-        }
+    .deal-path{
+      flex: 1 1 auto;
+      display:flex;
+      height: var(--track-h);
+      user-select:none;
+      overflow:hidden;
+      border-radius: var(--radius);
+      background: transparent;
+      min-width: 0;
+    }
 
-        .stage:last-child .chevron {
-            display: none;
-        }
+    .stage{
+      position:relative;
+      flex: 1 1 0;
+      min-width: 0;
+      display:flex;
+      align-items:center;
+      justify-content:center;
 
-        .stage.dead {
-            margin-left: auto;
-        }
+      font-size: 12.5px;
+      font-weight: 600;
+      letter-spacing: .2px;
 
-        .stage.dead .chevron {
-            display: none;
-        }
+      cursor:pointer;
+      outline: none;
+      border: 0;
+      padding: 0 8px;
+      background: var(--todo-bg);
+      color: var(--todo-fg);
 
-        .metrics-section {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-            gap: 16px;
-            margin-top: 28px;
-            padding-top: 24px;
-            border-top: 1px solid #e5e5e5;
-        }
+      clip-path: polygon(
+        0 0,
+        calc(100% - var(--cut)) 0,
+        100% 50%,
+        calc(100% - var(--cut)) 100%,
+        0 100%,
+        var(--cut) 50%
+      );
 
-        .metric-card {
-            padding: 16px;
-            background-color: #f7f7f7;
-            border: 1px solid #e5e5e5;
-            border-radius: 4px;
-        }
+      margin-left: calc(var(--overlap) * -1);
+      transition: transform 160ms ease, filter 160ms ease;
+    }
 
-        .metric-label {
-            font-size: 11px;
-            font-weight: 600;
-            color: #666;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 8px;
-        }
+    .stage:hover{ filter: brightness(0.99); }
+    .stage:active{ transform: translateY(1px); }
 
-        .metric-value {
-            font-size: 16px;
-            font-weight: 600;
-            color: #333;
-            margin-bottom: 4px;
-        }
+    .stage:first-child{
+      clip-path: polygon(
+        0 0,
+        calc(100% - var(--cut)) 0,
+        100% 50%,
+        calc(100% - var(--cut)) 100%,
+        0 100%
+      );
+      margin-left: 0;
+      justify-content:center;
+      padding-left: 8px;
+    }
 
-        .metric-subtext {
-            font-size: 12px;
-            color: #999;
-        }
+    .stage:last-child{
+      clip-path: polygon(
+        0 0,
+        100% 0,
+        100% 100%,
+        0 100%,
+        var(--cut) 50%
+      );
+    }
 
-        .bot-score-container {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
+    .stage:not(:last-child)::after{
+      content:"";
+      position:absolute;
+      top:0;
+      right:0;
+      width: var(--divider);
+      height:100%;
+      background: rgba(255,255,255,0.92);
+      pointer-events:none;
+    }
 
-        .bot-score-tier {
-            padding: 4px 8px;
-            border-radius: 3px;
-            font-size: 11px;
-            font-weight: 600;
-            white-space: nowrap;
-        }
+    .stage[data-state="active"]{ background: var(--active-bg); color: var(--active-fg); font-weight: 650; }
+    .stage[data-state="todo"]{ background: var(--todo-bg); color: var(--todo-fg); }
+    .deal-path .stage[data-state="done"]{
+      background: var(--done-bg) !important;
+      color: var(--done-fg) !important;
+    }
 
-        .bot-score-tier.hot {
-            background-color: #fce4e4;
-            color: #c23030;
-        }
+    .label{
+      display:flex;
+      align-items:center;
+      gap: 6px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 100%;
+      min-width: 0;
+    }
 
-        .bot-score-tier.qualified {
-            background-color: #fff3e0;
-            color: #f59e0b;
-        }
+    .stage[data-state="active"] .stage[data-state="done"] .text{
+      display:inline-block;
+      overflow:hidden;
+      text-overflow: ellipsis;
+      max-width: 100%;
+      min-width: 0;
+    }
 
-        .bot-score-tier.monitor {
-            background-color: #e6f2ff;
-            color: #0176d3;
-        }
+    .stage[data-state="done"] .text{ display:none; }
+    .stage[data-state="done"] .label{ gap: 0; justify-content:center; }
 
-        .bot-score-tier.walk {
-            background-color: #f0f0f0;
-            color: #666;
-        }
+    .tip{
+      position:absolute;
+      left: 50%;
+      bottom: calc(100% + 8px);
+      transform: translateX(-50%) translateY(6px);
+      opacity: 0;
+      pointer-events: none;
+      white-space: nowrap;
+      padding: 6px 8px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 650;
+      background: rgba(17,17,17,0.92);
+      color: #fff;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.18);
+      transition: opacity 140ms ease, transform 140ms ease;
+      z-index: 5;
+    }
+    .stage:hover .tip{
+      opacity: 1;
+      transform: translateX(-50%) translateY(0px);
+    }
 
-        .percentage {
-            font-size: 14px;
-            color: #999;
-        }
+    .cta{
+      height: 30px;
+      padding: 0 8px;
+      border-radius: 15px;
+      border: 0;
+      cursor:pointer;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: .1px;
+      color: #fff;
+      background: #1d63ff;
+      display:flex;
+      align-items:center;
+      gap: 6px;
+      box-shadow: 0 6px 16px rgba(29,99,255,0.20);
+      white-space:nowrap;
+      flex: 0 0 auto;
+      transition: transform 160ms ease, filter 160ms ease, box-shadow 160ms ease;
+      position: relative;
+      overflow:hidden;
+    }
+    .cta:hover{
+      filter: brightness(1.03);
+      box-shadow: 0 8px 26px rgba(29,99,255,0.24);
+      transform: translateY(-1px);
+    }
+    .cta:active{
+      transform: translateY(1px);
+      box-shadow: 0 6px 16px rgba(29,99,255,0.14);
+    }
 
-        @media (max-width: 768px) {
-            .container {
-                padding: 16px;
-            }
+    @media (max-width: 760px){
+      .bar{flex-wrap:wrap;}
+      .cta{margin-left:auto;}
+    }
 
-            .metrics-section {
-                grid-template-columns: repeat(2, 1fr);
-            }
+    /* Guidance */
+    .guidance{
+      margin-top: 6px;
+      padding-left: 36px;
+      box-sizing: border-box;
+    }
 
-            .pipeline-container {
-                overflow-x: scroll;
-            }
+    .guidanceWrap{
+      display:grid;
+      grid-template-rows: 1fr;
+      transition: grid-template-rows 220ms ease;
+    }
+    .guidanceWrap.collapsed{
+      grid-template-rows: 0fr;
+    }
+    .guidanceWrap > .guidanceInner{
+      overflow:hidden;
+      min-height:0;
+    }
 
-            h1 {
-                font-size: 16px;
-            }
-        }
-    </style>
+    .guidanceBody{
+      padding: 6px 0 0 0;
+      color: #333;
+      font-size: 12px;
+      line-height: 1.35;
+    }
+    .guidanceBody h4{
+      margin: 0 0 6px 0;
+      font-size: 12px;
+      font-weight: 600;
+      color: #111827;
+    }
+    .guidanceBody ul{
+      margin: 6px 0 0 16px;
+      padding: 0;
+    }
+    .guidanceBody li{
+      margin: 4px 0;
+      color: #4a4a4a;
+      font-weight: 550;
+    }
+
+    /* Toast */
+    .toast{
+      position: fixed;
+      top: 16px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-8px);
+      opacity: 0;
+      pointer-events:none;
+      background: var(--toast-bg);
+      color: var(--toast-fg);
+      border-radius: var(--toast-radius);
+      box-shadow: var(--toast-shadow);
+      padding: 8px 12px;
+      display:flex;
+      align-items:center;
+      gap: 8px;
+      min-width: 320px;
+      max-width: min(520px, calc(100vw - 24px));
+      z-index: 99999;
+      transition: opacity 200ms ease, transform 200ms ease;
+    }
+    .toast.show{
+      opacity: 1;
+      transform: translateX(-50%) translateY(0px);
+      pointer-events:auto;
+    }
+    .toast .msg{
+      font-weight: 700;
+      font-size: 13px;
+      flex:1;
+    }
+    .toast .x{
+      border:0;
+      background: transparent;
+      cursor:pointer;
+      width: 26px;
+      height: 26px;
+      display:grid;
+      place-items:center;
+      border-radius: 7px;
+      transition: background 120ms ease;
+    }
+    .toast .x:hover{ background: rgba(0,0,0,0.06); }
+  
+    .hlLoading{
+      margin-left:auto;
+      display:flex;
+      align-items:center;
+      gap:6px;
+      font-size:12px;
+      color:#64748b;
+      white-space:nowrap;
+    }
+    .spinner{
+      width:12px;
+      height:12px;
+      border:2px solid rgba(100,116,139,.35);
+      border-top-color: rgba(100,116,139,1);
+      border-radius:0;
+      animation: spin .8s linear infinite;
+      flex:0 0 auto;
+    }
+    @keyframes spin{to{transform:rotate(360deg)}}
+
+    /* ===== Full-screen loading overlay + blur (perceived speed) ===== */
+    body{ position: relative; }
+    .loading-blur{
+      filter: blur(3px);
+      opacity: 0.92;
+      pointer-events: none;
+      transition: filter 180ms ease, opacity 180ms ease;
+    }
+    .loadingOverlay{
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: rgba(255,255,255,0.88);
+      z-index: 100000;
+    }
+    .loadingCard{
+  display:flex;
+  flex-direction: column;
+  align-items:center;
+  gap: 8px;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  min-width: 0;
+  max-width: 360px;
+}
+.loadingSpinner{
+  width: 29px;
+  height: 29px;
+  border: 4px solid rgba(1,118,211,0.18);
+  border-top-color: rgba(1,118,211,1);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  flex:0 0 auto;
+}
+.loadingTitle{
+  font-size:24px;
+  font-weight: 800;
+  color: var(--text);
+}
+.loadingSub{
+  font-size: 12px;
+  color: var(--muted);
+}
+
+    .loadingTitle{
+      font-weight: 800;
+      font-size:24px;
+      color: #0f172a;
+    }
+    .loadingSub{
+      font-weight: 650;
+      font-size: 12.5px;
+      color: #64748b;
+    }
+
+    /* Badges */
+    .badge{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      padding: 2px 6px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: .1px;
+      line-height: 1.2;
+      white-space: nowrap;
+    }
+    .badge.overdue{
+      background: rgba(220,38,38,0.12);
+      color: var(--alert);
+      box-shadow: inset 0 0 0 1px rgba(220,38,38,0.18);
+    }
+    .badge.upcoming{
+  background: rgba(16,185,129,0.18);
+  color: rgba(6,95,70,1);
+  box-shadow: inset 0 0 0 1px rgba(16,185,129,0.28);
+}
+
+
+  
+
+/* --- Animations + hover tooltips --- */
+.stage{
+  transition: background-color .22s ease, border-color .22s ease, box-shadow .22s ease, transform .18s ease;
+}
+.stage[data-state="active"]{ animation: stagePop .22s ease; }
+.stage[data-state="done"]{ animation: stageDoneIn .20s ease; }
+@keyframes stagePop{ from{ transform: scale(0.985);} to{ transform: scale(1);} }
+@keyframes stageDoneIn{ from{ transform: scale(0.99); opacity: .92;} to{ transform: scale(1); opacity: 1;} }
+@keyframes chkIn{ from{ transform: scale(0.7); opacity: 0;} 
+
+/* --- Completed stage checkmark (no box) --- */
+.chk{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  margin-right:8px;
+  flex: 0 0 auto;
+  background: transparent !important;
+  box-shadow: none !important;
+  border: none !important;
+  width: auto !important;
+  height: auto !important;
+  border-radius: 0 !important;
+}
+.chk svg{
+  width:16px;
+  height:16px;
+  display:block;
+  animation: chkIn .18s ease;
+}
+
+to{ transform: scale(1); opacity: 1;} }
+
+/* --- Completed checkmark style (match reference) --- */
+.stage[data-state="active"] .chk,
+.stage[data-state="todo"] </style>
 </head>
+
 <body>
-    <div class="loading-spinner" id="loadingSpinner">
-        <div class="spinner"></div>
-        <div class="loading-text">Loading deal information...</div>
-    </div>
+  <div class="frame">
+    <div class="root" id="root">
 
-    <div class="success-toast" id="successToast">
-        Stage updated successfully
-    </div>
+      <div class="loadingOverlay" id="loadingOverlay" aria-live="polite">
+        <div class="loadingCard">
+          <div class="loadingSpinner" aria-hidden="true"></div>
+          <div class="loadingTitle" id="loadingOverlayTitle">Loading record...</div>
+          <div class="loadingSub" id="loadingOverlaySub">Fetching data from Monday.com</div>
+        </div>
+      </div>
 
-    <div class="container">
-        <div class="error-banner" id="errorBanner"></div>
+      <div id="contentWrap">
 
-        <div class="page-header">
-            <div class="title-row">
-                <h1 id="itemName">Loading...</h1>
-                <span class="flag-badge flag-deceased" id="deceasedFlag" style="display: none;">
-                    ✓ Deceased
+      <!-- Highlights -->
+      <div class="highlights" aria-label="Highlights panel">
+        <!-- ✅ Single-line header (Salesforce-like) -->
+        <div class="hlTop">
+          <div class="hlIconTile" aria-hidden="true" title="Lead">
+            <img src="Untitled design (8).png" alt="" aria-hidden="true" />
+          </div>
+
+          <div class="hlTitle" id="hlTitle">1251 Forester St Houston TX 77011</div>
+          <div class="hlLoading" id="hlLoading" style="display:none" aria-live="polite">
+            <span class="spinner" aria-hidden="true"></span>
+            <span id="hlLoadingText">Loading…</span>
+          </div>
+        </div>
+
+        <div class="hlMetrics">
+
+          <!-- ✅ ORDER: Stage Age - Stalled Reason - Follow-up Date - Next Action Step -->
+
+          <div class="metric">
+            <div class="mLabel">Stage Age</div>
+            <div class="mValue" id="mHeirsContacted"><span id="mHeirsContactedText"></span></div>
+          </div>
+
+          <div class="metric">
+            <div class="mLabel">Stalled Reason</div>
+            <div class="mValue">
+              <span class="stallHL" id="stallWrap" style="display:none">
+                <span class="alertIcon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24">
+                    <circle cx="12" cy="12" r="10" fill="var(--alert)"></circle>
+                    <path d="M11 6h2v9h-2z" fill="#fff"></path>
+                    <path d="M11 17h2v2h-2z" fill="#fff"></path>
+                  </svg>
                 </span>
-                <span class="flag-badge flag-tax-suit" id="taxSuitFlag" style="display: none;">
-                    ✓ Tax Suit
-                </span>
-                <span class="flag-badge flag-heirs" id="heirsFlag" style="display: none;">
-                    Heirs: <span id="heirCount">0</span>
-                </span>
+                <span id="mStalledReason"></span>
+              </span>
+              <span id="stallEmpty">—</span>
+</div>
+          </div>
+
+          <div class="metric">
+            <div class="mLabel">Follow-up Date</div>
+            <div class="mValue">
+              <span id="mFollowUpDate"></span>
+              <span id="followUpBadge" style="display:none"></span>
+              <span class="dueIcon" id="followUpIcon" aria-hidden="true"></span>
             </div>
-            <div class="subtitle" id="subtitle">Loading item details...</div>
-        </div>
+          </div>
 
-        <div class="pipeline-section">
-            <div class="pipeline-label">Pipeline Stage</div>
-            <div class="pipeline-container" id="pipelineContainer">
-                <!-- Populated by JavaScript -->
-            </div>
-        </div>
+          <div class="metric">
+            <div class="mLabel">Next Action Step</div>
+            <div class="mValue" id="mNextActionStep"></div>
+          </div>
 
-        <div class="metrics-section" id="metricsSection">
-            <!-- Populated by JavaScript -->
         </div>
+      </div>
+
+      <!-- ✅ Divider removed -->
+
+      <!-- Deal Path -->
+      <div class="bar">
+        <button class="disclosure" id="notesToggle" type="button" aria-expanded="false" aria-controls="guidanceArea" title="Toggle guidance">
+          <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
+            <path fill="#17345b" d="M7.4 9.2 12 13.8l4.6-4.6 1.4 1.4L12 16.6 6 10.6z"/>
+          </svg>
+        </button>
+
+        <div id="dealPath" class="deal-path" role="tablist" aria-label="Deal stages"></div>
+
+        <button class="cta" id="completeBtn" type="button" title="Move to next stage">
+          <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true">
+            <path fill="white" d="M9 16.2 4.8 12 3.4 13.4 9 19l12-12-1.4-1.4z"/>
+          </svg>
+          Mark Stage as Complete
+        </button>
+      </div>
+
+      <div class="guidance" id="guidanceArea">
+        <div class="guidanceWrap collapsed" id="panelWrap">
+          <div class="guidanceInner">
+            <div class="guidanceBody" id="panelBody"></div>
+          </div>
+        </div>
+      </div>
+
+      </div>
+
     </div>
+  </div>
 
-    <script>
-        // Configuration
-        const LOAD_WEBHOOK_URL = "YOUR_LOAD_WEBHOOK_URL_HERE";
-        const SAVE_WEBHOOK_URL = "YOUR_SAVE_WEBHOOK_URL_HERE";
+  <div class="toast" id="toast" role="status" aria-live="polite">
+    <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+      <path fill="#0ba79c" d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm-1 14-4-4 1.4-1.4L11 12.2l5.6-5.6L18 8l-7 8Z"/>
+    </svg>
+    <div class="msg" id="toastMsg">Status changed successfully.</div>
+    <button class="x" id="toastClose" type="button" aria-label="Dismiss">
+      <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true">
+        <path fill="#0d3a33" d="M18.3 5.7 12 12l6.3 6.3-1.4 1.4L10.6 13.4 4.3 19.7 2.9 18.3 9.2 12 2.9 5.7 4.3 4.3l6.3 6.3 6.3-6.3z"/>
+      </svg>
+    </button>
+  </div>
 
-        // Demo fallback data
-        const DEMO_DATA = {
-            "item_id": "123",
-            "board_id": "456",
-            "name": "HARRIS COUNTY vs. HURT",
-            "stage": "Dial",
-            "appraised_value": 544519,
-            "tax_balance": 127857.99,
-            "value_to_tax_ratio": 23.48,
-            "gross_spread": 416661,
-            "bot_score": 87,
-            "lead_created": "2025-01-29",
-            "deceased_flag": true,
-            "active_tax_suit": true,
-            "heir_count": 3
+  <script>
+    const MAKE_SET_STAGE_URL = "https://tphllc.app.n8n.cloud/webhook/dpa-dealpath-save";
+    const MAKE_GET_STAGE_URL = "https://tphllc.app.n8n.cloud/webhook/dpa-dealpath-load";
+    const MONDAY_STATUS_COLUMN_ID = "color_mm1c7yw1";
+
+    const STAGES = [
+      { key: "raw",            label: "Raw" },
+      { key: "research",       label: "Research" },
+      { key: "qualified",      label: "Qualified" },
+      { key: "dial",           label: "Dial" },
+      { key: "negotiating",    label: "Negotiating" },
+      { key: "under_contract", label: "Under Contract" },
+      { key: "dead",           label: "Dead" }
+    ];
+
+    const STAGE_NOTES = {
+      raw: { title: "New Lead — Initial Triage", bullets: [
+        "Verify property address and county via CAD lookup",
+        "Check if tax suit is active — get case number",
+        "Confirm property has minimum $100K gross spread potential",
+        "Run initial death signals check (tax payment gaps, age)"
+      ]},
+      research: { title: "Deep Research Phase", bullets: [
+        "Confirm death using Two-Source Rule (obituary + public records)",
+        "Identify all potential heirs — target 1-4 heirs max",
+        "Pull CAD assessed value and calculate AS-IS value (CAD × Condition Multiplier)",
+        "Verify no active liens beyond delinquent taxes",
+        "Score the lead using Doctrine scoring factors"
+      ]},
+      qualified: { title: "Lead Qualified — Prep for Outreach", bullets: [
+        "Gross spread confirmed ≥ $100K hard floor",
+        "Heir count is manageable (≤4 ideal, 5-7 workable with equity buffer)",
+        "Skip trace all identified heirs — get phone numbers",
+        "Prepare call script and heir-specific talking points",
+        "Set tier classification: HOT / QUALIFIED / MONITOR"
+      ]},
+      dial: { title: "Active Dialing", bullets: [
+        "Attempt contact with all identified heirs",
+        "Track call outcomes per heir (No Answer, Interested, Not Interested)",
+        "Leave voicemail with callback number on first attempt",
+        "Log all conversation notes on the heir's subitem",
+        "Set follow-up dates for no-answers (3-day cadence)"
+      ]},
+      negotiating: { title: "Deal Negotiation", bullets: [
+        "Confirm heir's motivation and timeline to sell",
+        "Present offer range (buy at 20-50 cents on the dollar)",
+        "Discuss tax payoff responsibility and closing timeline",
+        "Address any title issues or competing claims",
+        "Get verbal agreement before sending paperwork"
+      ]},
+      under_contract: { title: "Under Contract — Close It Out", bullets: [
+        "Confirm signed docs received from all required parties",
+        "Verify title is clear or clearing process is underway",
+        "Confirm closing timeline and title company coordination",
+        "Calculate final net profit (Gross Spread − legal costs − acquisition)",
+        "Update board status and notify team"
+      ]},
+      dead: { title: "Dead Lead — Document Why", bullets: [
+        "Record the specific reason this deal died",
+        "Update all heir statuses to reflect final outcome",
+        "Archive any research for potential future revisit",
+        "If spread was the issue, flag for re-check if taxes grow"
+      ]}
+    };
+
+    function getParam(name){
+      return new URLSearchParams(window.location.search).get(name);
+    }
+
+    function escapeHtml(str){
+      return String(str)
+        .replaceAll("&","&amp;")
+        .replaceAll("<","&lt;")
+        .replaceAll(">","&gt;")
+        .replaceAll('"',"&quot;")
+        .replaceAll("'","&#039;");
+    }
+
+    
+    function isWebhookConfigured(url){
+      if(!url) return false;
+      const u = String(url);
+      if(u.endsWith(".com/")) return false;
+      if(u.includes("REPLACE_WITH_SECOND_WEBHOOK")) return false;
+      return true;
+    }
+
+let activeIndex = 0;
+    let isSavingRemoteStage = false;
+
+    const el = document.getElementById("dealPath");
+    const completeBtn = document.getElementById("completeBtn");
+    const notesToggle = document.getElementById("notesToggle");
+    const panelWrap = document.getElementById("panelWrap");
+    const panelBody = document.getElementById("panelBody");
+
+    const toast = document.getElementById("toast");
+    const toastMsg = document.getElementById("toastMsg");
+    const toastClose = document.getElementById("toastClose");
+    let toastTimer = null;
+
+    function showToast(message){
+      toastMsg.textContent = message || "Status changed successfully.";
+      toast.classList.add("show");
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => toast.classList.remove("show"), 2500);
+    }
+    toastClose.addEventListener("click", () => toast.classList.remove("show"));
+
+    function chkIcon(state){
+      if(state !== "done"){
+        return "";
+      }
+      return `
+        <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
+          <path fill="#0d3a33" d="M9 16.2 4.8 12 3.4 13.4 9 19l12-12-1.4-1.4z"></path>
+        </svg>
+      `;
+    }
+
+    function renderGuidance(){
+      const stage = STAGES[activeIndex];
+      const note = STAGE_NOTES[stage.key] || { title: "Notes", bullets: [] };
+      const bullets = (note.bullets || []).map(b => `<li>${escapeHtml(b)}</li>`).join("");
+      panelBody.innerHTML = `
+        <h4>${escapeHtml(note.title || "Notes")}</h4>
+        ${bullets ? `<ul>${bullets}</ul>` : `<div style="color:#6a6a6a;font-weight:550;">No notes set for this stage.</div>`}
+      `;
+    }
+
+    function render(){
+      el.innerHTML = "";
+      // Tooltip helper: show days in current stage when available
+      const currentStageAgeDaysText = (() => {
+        const t = (document.getElementById("mHeirsContactedText")?.textContent || document.getElementById("mHeirsContacted")?.textContent || "").trim();
+        const m = t.match(/(\d+)/);
+        if(m) {
+          const d = parseInt(m[1], 10);
+          if(Number.isFinite(d)) return d === 1 ? "1 day" : `${d} days`;
+        }
+        return "";
+      })();
+      STAGES.forEach((s, i) => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "stage";
+        btn.setAttribute("role", "tab");
+        btn.setAttribute("aria-selected", String(i === activeIndex));
+        btn.dataset.stage = s.key;
+
+        const state = (i < activeIndex) ? "done" : (i === activeIndex ? "active" : "todo");
+        btn.dataset.state = state;
+
+        const labelWrap = document.createElement("span");
+        labelWrap.className = "label";
+
+        const chk = document.createElement("span");
+        chk.className = "chk";
+        chk.innerHTML = chkIcon(state);
+        labelWrap.appendChild(chk);
+
+        const text = document.createElement("span");
+        text.className = "text";
+        text.textContent = s.label;
+        labelWrap.appendChild(text);
+
+        const tip = document.createElement("span");
+        tip.className = "tip";
+        tip.textContent = (state === "done") ? `Completed: ${s.label}` : (state === "active" ? (currentStageAgeDaysText ? `${currentStageAgeDaysText} in ${s.label}` : `Current: ${s.label}`) : `Upcoming: ${s.label}`);
+
+        btn.appendChild(labelWrap);
+        btn.appendChild(tip);
+
+        btn.addEventListener("click", () => setActive(i, { announce: true, saveRemote: true }));
+        el.appendChild(btn);
+      });
+
+      renderGuidance();
+    }
+
+    function setActive(i, opts = {}){
+      const prev = activeIndex;
+      if(i === prev) return;
+      activeIndex = i;
+      render();
+
+      if(opts.announce){
+        const label = STAGES[activeIndex].label || "Started";
+        setTimeout(() => showToast(`Status changed successfully. (${label})`), 120);
+      }
+      if(opts.saveRemote){
+        saveStageToMonday(prev).catch(()=>{});
+      }
+    }
+
+    function stageIndexFromResponse(data){
+      if(data?.stageKey){
+        const idx = STAGES.findIndex(s => s.key === data.stageKey);
+        if(idx >= 0) return idx;
+      }
+      if(data?.leadStatus){
+        const idx = STAGES.findIndex(s => s.key === data.leadStatus);
+        if(idx >= 0) return idx;
+      }
+      if(data?.stageLabel || data?.leadStatusLabel){
+        const stageLabel = data?.stageLabel ?? data?.leadStatusLabel;
+
+        const target = String(stageLabel || "").trim().toLowerCase()
+          .replace(/[\/\-]/g, " ")
+          .replace(/\s+/g, " ");
+        for(let i=0;i<STAGES.length;i++){
+          const cand = String(STAGES[i].label || "").trim().toLowerCase()
+            .replace(/[\/\-]/g, " ")
+            .replace(/\s+/g, " ");
+          if(cand === target) return i;
+        }
+      }
+      return -1;
+    }
+    function cacheKey(itemId, boardId){
+      return "dealpath_cache::" + (boardId ? String(boardId) : "") + "::" + String(itemId);
+    }
+
+    function readCache(itemId, boardId){
+      try{
+        const raw = localStorage.getItem(cacheKey(itemId, boardId));
+        if(!raw) return null;
+        const obj = JSON.parse(raw);
+        if(!obj || typeof obj !== "object") return null;
+        if(!obj.data || typeof obj.data !== "object") return null;
+        return obj;
+      }catch(e){
+        return null;
+      }
+    }
+
+    function writeCache(itemId, boardId, data){
+      try{
+        const payload = {
+          cachedAt: new Date().toISOString(),
+          data: {
+            address: pickText(data?.address) || pickText(data?.title) || "",
+            title: pickText(data?.title) || "",
+            stageKey: data?.stageKey,
+            stageLabel: data?.stageLabel,
+            leadStatusLabel: data?.leadStatusLabel,
+            stageAge: pickText(data?.stageAge) || "",
+            stalledReason: pickText(data?.stalledReason) || "",
+            followUpDate: pickText(data?.followUpDate) || "",
+            nextActionStep: pickText(data?.nextActionStep) || "",
+            lastStatusChangeDate: pickText(data?.lastStatusChangeDate) || pickText(data?.last_status_change_date) || ""
+          }
         };
+        localStorage.setItem(cacheKey(itemId, boardId), JSON.stringify(payload));
+      }catch(e){}
+    }
 
-        const PIPELINE_STAGES = [
-            "New Lead",
-            "Research",
-            "Qualified",
-            "Ready to Dial",
-            "Dial",
-            "Negotiating",
-            "Under Contract",
-            "Dead"
-        ];
+    
+    function pickText(v){
+      if(v === null || v === undefined) return "";
+      if(typeof v === "string") return v;
+      if(typeof v === "number" || typeof v === "boolean") return String(v);
+      if(typeof v === "object"){
+        // Common Make.com / Monday shapes
+        if(typeof v.text === "string") return v.text;
+        if(typeof v.value === "string") return v.value;
+        if(typeof v.label === "string") return v.label;
+      }
+      return "";
+    }
 
-        let currentData = null;
+    function normalizeText(v){
+      const s = pickText(v).trim();
+      return s ? s : "—";
+    }
+    function setText(id, v){
+      const el = document.getElementById(id);
+      if(el) el.textContent = normalizeText(v);
+    }
 
-        // Initialize
-        document.addEventListener('DOMContentLoaded', () => {
-            loadData();
+
+    function ordinalSuffix(n){
+      const v = n % 100;
+      if(v >= 11 && v <= 13) return "th";
+      switch(n % 10){
+        case 1: return "st";
+        case 2: return "nd";
+        case 3: return "rd";
+        default: return "th";
+      }
+    }
+    function formatDateNice(d){
+      const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+      const m = months[d.getMonth()];
+      const day = d.getDate();
+      return `${m} ${day}${ordinalSuffix(day)}`;
+    }
+    function parseIsoDateOnly(text){
+      const raw = pickText(text).trim();
+      if(!raw) return null;
+      // Accept YYYY-MM-DD or YYYY-MM-DD HH:MM...
+      const m = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
+      if(!m) return null;
+      const iso = `${m[1]}-${m[2]}-${m[3]}`;
+      const d = new Date(iso);
+      if(isNaN(d.getTime())) return null;
+      return { iso, date: d };
+    }
+    function computeStageAgeText(lastStatusChangeDate){
+  const parsed = parseIsoDateOnly(lastStatusChangeDate);
+  if(!parsed) return "";
+  const now = new Date();
+  const todayUTC = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+  const thenUTC = Date.UTC(parsed.date.getFullYear(), parsed.date.getMonth(), parsed.date.getDate());
+  const diffDays = Math.max(0, Math.floor((todayUTC - thenUTC) / 86400000));
+  return diffDays === 1 ? "1 Day" : `${diffDays} Days`;
+}
+
+function setStageAgeColor(text){
+  const wrap = document.getElementById("mHeirsContacted");
+  const textEl = document.getElementById("mHeirsContactedText");
+  if(!wrap) return;
+
+  const raw = String(text || "").trim();
+  const shown = (!raw || raw === "—") ? "—" : raw;
+
+  if(textEl){
+    textEl.textContent = shown;
+  }else{
+    wrap.textContent = shown;
+  }
+}
+
+
+
+function setStageAgeFromData(data){
+  const explicit = pickText(data?.stageAge).trim();
+  if(explicit){
+    setStageAgeColor(explicit);
+    return;
+  }
+  const computed = computeStageAgeText(data?.lastStatusChangeDate || data?.last_status_change_date || "");
+  setStageAgeColor(computed);
+}
+
+
+function setFollowUpDate(raw){
+      const el = document.getElementById("mFollowUpDate");
+      if(!el) return;
+
+      const picked = pickText(raw).trim();
+      if(!picked){
+        el.textContent = "—";
+        delete el.dataset.iso;
+        return;
+      }
+
+      const isoParsed = parseIsoDateOnly(picked);
+      if(isoParsed){
+        el.dataset.iso = isoParsed.iso;
+        el.textContent = formatDateNice(isoParsed.date);
+        return;
+      }
+
+      // Fallback: try loose parse; keep original text if it looks human-formatted.
+      const loose = parseLooseDate(picked);
+      if(loose){
+        // Store best-effort ISO if year/month/day are present
+        const yyyy = loose.getFullYear();
+        const mm = String(loose.getMonth()+1).padStart(2,"0");
+        const dd = String(loose.getDate()).padStart(2,"0");
+        el.dataset.iso = `${yyyy}-${mm}-${dd}`;
+        el.textContent = formatDateNice(loose);
+        return;
+      }
+
+      el.textContent = normalizeText(picked);
+      delete el.dataset.iso;
+    }
+
+    let overlayShownAt = null;
+    function showOverlay(on, titleText){
+      const overlay = document.getElementById("loadingOverlay");
+      const root = document.getElementById("root");
+      const content = document.getElementById("contentWrap");
+      const ttl = document.getElementById("loadingOverlayTitle");
+      if(!overlay || !root) return;
+      if(on){
+        if(ttl && typeof titleText === "string") ttl.textContent = titleText;
+        overlay.style.display = "flex";
+        if(content) content.classList.add("loading-blur");
+        overlayShownAt = Date.now();
+      }else{
+        overlay.style.display = "none";
+        if(content) content.classList.remove("loading-blur");
+        overlayShownAt = null;
+      }
+    }
+
+    function setStalledReasonUI(){
+      const wrap = document.getElementById("stallWrap");
+      const empty = document.getElementById("stallEmpty");
+      const valEl = document.getElementById("mStalledReason");
+      const raw = valEl ? pickText(valEl.textContent) : "";
+      const has = String(raw || "").trim() && String(raw).trim() !== "—";
+      if(wrap) wrap.style.display = has ? "inline-flex" : "none";
+      if(empty) empty.style.display = has ? "none" : "inline";
+    }
+
+function showLoading(on, text){
+      const el = document.getElementById("hlLoading");
+      const tx = document.getElementById("hlLoadingText");
+      if(!el) return;
+      if(on){
+        if(tx && typeof text === "string") tx.textContent = text;
+        el.style.display = "flex";
+      }else{
+        el.style.display = "none";
+      }
+    }
+
+    function applyFieldsFromData(data){
+      if(!data) return;
+
+      // Lead Status / Stage
+      const idx = stageIndexFromResponse(data);
+      if(idx >= 0){
+        activeIndex = idx;
+        render();
+      }
+
+      // Title / Address (optional)
+      {
+        const addr = pickText(data?.address) || pickText(data?.title) || "";
+        const t = document.getElementById("hlTitle");
+        if(t) t.textContent = normalizeText(addr);
+      }
+
+      // Metrics (optional)
+      setStageAgeFromData(data);
+      setText("mStalledReason", data?.stalledReason);
+      setStalledReasonUI();
+      setFollowUpDate(data?.followUpDate);
+      setText("mNextActionStep", data?.nextActionStep);
+
+      // Recompute follow-up icon after any update
+      setFollowUpIndicator();
+    }
+
+
+    async function loadStageFromMonday(){
+      const itemId = getParam("itemId");
+      const boardId = getParam("boardId");
+      if(!itemId) return;
+      if(!isWebhookConfigured(MAKE_GET_STAGE_URL)) return;
+
+      // ✅ Speed: paint immediately from local cache (if available), then refresh in background
+      const cached = readCache(itemId, boardId);
+      if(cached && cached.data){
+        applyFieldsFromData(cached.data);
+      }
+
+      showLoading(true, cached ? "Syncing…" : "Loading…");
+      showOverlay(true, "Loading record...");
+      const overlayMinMs = 1500;
+      const overlayStart = Date.now();
+
+      try{
+        const url = new URL(MAKE_GET_STAGE_URL);
+        url.searchParams.set("itemId", String(itemId));
+        if(boardId) url.searchParams.set("boardId", String(boardId));
+        const userId = getParam("userId");
+        if(userId) url.searchParams.set("userId", String(userId));
+
+        const res = await fetch(url.toString(), {
+          method: "GET",
+          headers: { "Accept": "application/json" },
+          cache: "no-store"
         });
+        if(!res.ok) throw new Error("GET fields failed: " + res.status);
 
-        function getUrlParams() {
-            const params = new URLSearchParams(window.location.search);
-            return {
-                item_id: params.get('item_id') || '123',
-                board_id: params.get('board_id') || '456'
-            };
-        }
+        const data = await res.json();
 
-        async function loadData() {
-            const spinner = document.getElementById('loadingSpinner');
-            const errorBanner = document.getElementById('errorBanner');
+        applyFieldsFromData(data);
+        writeCache(itemId, boardId, data);
 
-            spinner.classList.add('show');
-            errorBanner.classList.remove('show');
+      } catch (e){
+        console.warn("Could not load remote fields:", e);
+      } finally {
+        // tiny delay prevents flicker if load is ultra fast
+        // Prevent flicker + ensure at least ~1.5s overlay or until data arrives
+        setTimeout(() => showLoading(false), 250);
+        const elapsed = Date.now() - overlayStart;
+        const remaining = Math.max(0, overlayMinMs - elapsed);
+        setTimeout(() => showOverlay(false), remaining);
+      }
+    }
 
-            try {
-                const params = getUrlParams();
-                const response = await fetch(LOAD_WEBHOOK_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(params)
-                });
+    async function saveStageToMonday(prevIndex){
+      const itemId = getParam("itemId");
+      if(!itemId) return;
 
-                if (!response.ok) throw new Error('Failed to load data');
-                currentData = await response.json();
-            } catch (error) {
-                console.log('Using demo data:', error.message);
-                currentData = { ...DEMO_DATA };
-                showError('Using demo data. Webhook not configured.');
-            }
+      if(isSavingRemoteStage) return;
+      if(!isWebhookConfigured(MAKE_SET_STAGE_URL)){
+        showToast("Make SET webhook not configured yet.");
+        return;
+      }
 
-            spinner.classList.remove('show');
-            renderPage();
-        }
+      const payload = {
+        itemId: String(itemId),
+        columnId: MONDAY_STATUS_COLUMN_ID,
+        stageKey: STAGES[activeIndex].key,
+        stageLabel: STAGES[activeIndex].label,
+        previousStageKey: STAGES[prevIndex]?.key || null,
+        previousStageLabel: STAGES[prevIndex]?.label || null,
+        occurredAt: new Date().toISOString(),
+        boardId: getParam("boardId"),
+        userId: getParam("userId")
+      };
 
-        function renderPage() {
-            if (!currentData) return;
+      isSavingRemoteStage = true;
+      try{
+        await fetch(MAKE_SET_STAGE_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+          keepalive: true
+        });
+      } catch (e){
+        console.warn("Save to Monday failed:", e);
+        showToast("Could not save stage. Please retry.");
+      } finally {
+        isSavingRemoteStage = false;
+      }
+    }
 
-            // Title and flags
-            document.getElementById('itemName').textContent = currentData.name;
-            document.getElementById('subtitle').textContent = `ID: ${currentData.item_id} | Board: ${currentData.board_id}`;
+    notesToggle.addEventListener("click", () => {
+      const expanded = notesToggle.getAttribute("aria-expanded") === "true";
+      const next = !expanded;
+      notesToggle.setAttribute("aria-expanded", String(next));
+      panelWrap.classList.toggle("collapsed", !next);
+    });
 
-            // Flags
-            if (currentData.deceased_flag) {
-                document.getElementById('deceasedFlag').style.display = 'inline-flex';
-            }
-            if (currentData.active_tax_suit) {
-                document.getElementById('taxSuitFlag').style.display = 'inline-flex';
-            }
-            if (currentData.heir_count > 0) {
-                document.getElementById('heirCount').textContent = currentData.heir_count;
-                document.getElementById('heirsFlag').style.display = 'inline-flex';
-            }
+    completeBtn.addEventListener("click", () => {
+      if(activeIndex < STAGES.length - 1){
+        setTimeout(() => setActive(activeIndex + 1, { announce: true, saveRemote: true }), 80);
+      } else {
+        showToast("Already at final status.");
+      }
+    });
 
-            // Pipeline stages
-            renderPipelineStages();
+    /* Follow-up indicator icons */
+    const followUpEl = document.getElementById("mFollowUpDate");
+    const followUpIcon = document.getElementById("followUpIcon");
+    const followUpBadge = document.getElementById("followUpBadge");
 
-            // Metrics
-            renderMetrics();
-        }
+    function parseLooseDate(text){
+      if(!text) return null;
+      const raw = String(text).trim();
+      const cleaned = raw.replace(/\b(\d{1,2})(st|nd|rd|th)\b/gi, "$1");
+      const hasYear = /\b(19|20)\d{2}\b/.test(cleaned);
+      const withYear = hasYear ? cleaned : (cleaned + " " + new Date().getFullYear());
+      const d = new Date(withYear);
+      if(isNaN(d.getTime())) return null;
+      return d;
+    }
 
-        function renderPipelineStages() {
-            const container = document.getElementById('pipelineContainer');
-            container.innerHTML = '';
+    
+    function setFollowUpIndicator(){
+      if(!followUpEl) return;
 
-            const currentStageIndex = PIPELINE_STAGES.findIndex(s =>
-                s.toLowerCase() === (currentData.stage || '').toLowerCase()
-            );
-            const deadIndex = PIPELINE_STAGES.indexOf('Dead');
+      const badge = followUpBadge;
+      const rawText = String(followUpEl.textContent || "").trim();
+      const isoAttr = (followUpEl.dataset && followUpEl.dataset.iso) ? String(followUpEl.dataset.iso).trim() : "";
+      if(followUpIcon) followUpIcon.innerHTML = ""; // keep element but unused visually
+      if(badge){
+        badge.style.display = "none";
+        badge.className = "";
+        badge.textContent = "";
+      }
 
-            PIPELINE_STAGES.forEach((stage, index) => {
-                if (stage === 'Dead') return; // Handle separately
+      // If empty/placeholder, no badge
+      if(!rawText || rawText === "—") return;
 
-                let status = 'future';
-                if (index < currentStageIndex) status = 'completed';
-                if (index === currentStageIndex) status = 'active';
+      const d = isoAttr ? new Date(isoAttr) : parseLooseDate(rawText);
+      if(!d) return;
+      if(isNaN(d.getTime())) return;
 
-                const stageDiv = document.createElement('div');
-                stageDiv.className = 'stage';
+      const today = new Date();
+      today.setHours(0,0,0,0);
+      const dd = new Date(d);
+      dd.setHours(0,0,0,0);
 
-                const button = document.createElement('button');
-                button.className = `stage-button ${status}`;
-                button.textContent = stage;
-                button.onclick = () => updateStage(stage);
+      const isOverdue = dd < today;
+      if(badge){
+        badge.style.display = "inline-flex";
+        badge.className = "badge " + (isOverdue ? "overdue" : "upcoming");
+        badge.textContent = isOverdue ? "overdue" : "upcoming";
+      }
+    }
 
-                stageDiv.appendChild(button);
+    setFollowUpIndicator();
 
-                if (index < PIPELINE_STAGES.length - 2) {
-                    const chevron = document.createElement('div');
-                    chevron.className = 'chevron';
-                    stageDiv.appendChild(chevron);
-                }
+    if(followUpEl){
+      const obs = new MutationObserver(() => setFollowUpIndicator());
+      obs.observe(followUpEl, { childList: true, characterData: true, subtree: true });
+    }
 
-                container.appendChild(stageDiv);
-            });
-
-            // Dead stage
-            const deadDiv = document.createElement('div');
-            deadDiv.className = 'stage dead';
-            const deadButton = document.createElement('button');
-            deadButton.className = `stage-button ${currentStageIndex === deadIndex ? 'active' : 'dead'}`;
-            deadButton.textContent = 'Dead';
-            deadButton.onclick = () => updateStage('Dead');
-            deadDiv.appendChild(deadButton);
-            container.appendChild(deadDiv);
-        }
-
-        function renderMetrics() {
-            const metricsSection = document.getElementById('metricsSection');
-            metricsSection.innerHTML = '';
-
-            const metrics = [
-                {
-                    label: 'Appraised Value',
-                    value: formatCurrency(currentData.appraised_value)
-                },
-                {
-                    label: 'Tax Balance Due',
-                    value: formatCurrency(currentData.tax_balance)
-                },
-                {
-                    label: 'Value to Tax Ratio',
-                    value: `${currentData.value_to_tax_ratio}%`,
-                    isPercentage: true
-                },
-                {
-                    label: 'Gross Spread',
-                    value: formatCurrency(currentData.gross_spread)
-                },
-                {
-                    label: 'Bot Score',
-                    custom: true,
-                    html: renderBotScore(currentData.bot_score)
-                },
-                {
-                    label: 'Lead Age',
-                    value: calculateLeadAge(currentData.lead_created),
-                    subtext: 'days in CRM'
-                }
-            ];
-
-            metrics.forEach(metric => {
-                const card = document.createElement('div');
-                card.className = 'metric-card';
-
-                const label = document.createElement('div');
-                label.className = 'metric-label';
-                label.textContent = metric.label;
-                card.appendChild(label);
-
-                if (metric.custom) {
-                    card.innerHTML += metric.html;
-                } else {
-                    const value = document.createElement('div');
-                    value.className = 'metric-value';
-                    value.textContent = metric.value;
-                    card.appendChild(value);
-
-                    if (metric.subtext) {
-                        const subtext = document.createElement('div');
-                        subtext.className = 'metric-subtext';
-                        subtext.textContent = metric.subtext;
-                        card.appendChild(subtext);
-                    }
-                }
-
-                metricsSection.appendChild(card);
-            });
-        }
-
-        function renderBotScore(score) {
-            let tier = 'walk';
-            let tierText = 'Walk';
-
-            if (score >= 85) {
-                tier = 'hot';
-                tierText = 'Hot';
-            } else if (score >= 60) {
-                tier = 'qualified';
-                tierText = 'Qualified';
-            } else if (score >= 31) {
-                tier = 'monitor';
-                tierText = 'Monitor';
-            }
-
-            return `
-                <div class="bot-score-container">
-                    <div class="metric-value">${score}</div>
-                    <div class="bot-score-tier ${tier}">${tierText}</div>
-                </div>
-            `;
-        }
-
-        async function updateStage(newStage) {
-            const spinner = document.getElementById('loadingSpinner');
-            spinner.classList.add('show');
-
-            try {
-                const response = await fetch(SAVE_WEBHOOK_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        item_id: currentData.item_id,
-                        board_id: currentData.board_id,
-                        stage: newStage
-                    })
-                });
-
-                if (response.ok) {
-                    currentData.stage = newStage;
-                    renderPipelineStages();
-                    showSuccess();
-                } else {
-                    showError('Failed to update stage');
-                }
-            } catch (error) {
-                showError('Error updating stage: ' + error.message);
-            }
-
-            spinner.classList.remove('show');
-        }
-
-        function calculateLeadAge(createdDate) {
-            if (!createdDate) return '0';
-            const created = new Date(createdDate);
-            const today = new Date();
-            const days = Math.floor((today - created) / (1000 * 60 * 60 * 24));
-            return days.toString();
-        }
-
-        function formatCurrency(value) {
-            if (value === null || value === undefined) return '$0';
-            return new Intl.NumberFormat('en-US', {
-                style: 'currency',
-                currency: 'USD',
-                minimumFractionDigits: 0,
-                maximumFractionDigits: 0
-            }).format(value);
-        }
-
-        function showError(message) {
-            const banner = document.getElementById('errorBanner');
-            banner.textContent = message;
-            banner.classList.add('show');
-        }
-
-        function showSuccess() {
-            const toast = document.getElementById('successToast');
-            toast.classList.add('show');
-            setTimeout(() => {
-                toast.classList.remove('show');
-            }, 3000);
-        }
-    </script>
+    render();
+    // Ensure placeholders show dashes immediately if empty
+    ["mStalledReason","mFollowUpDate","mNextActionStep"].forEach(id => {
+      const el = document.getElementById(id);
+      if(el) setText(id, el.textContent);
+    });
+    setStalledReasonUI();
+    loadStageFromMonday();
+  </script>
 </body>
 </html>
